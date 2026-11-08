@@ -2,7 +2,7 @@ import express from "express";
 
 const router = express.Router();
 
-router.post("/signup",(req,res)=>{
+router.get("/signup",(req,res)=>{
     res.status(200).send({success: true, message: "signup."})
     console.log("Signup.");
   });
