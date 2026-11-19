@@ -1,11 +1,10 @@
 import express from "express";
+import { signup } from "../controllers/auth.controllers.js";
 
 const router = express.Router();
 
-router.get("/signup",(req,res)=>{
-    res.status(200).send({success: true, message: "signup."})
-    console.log("Signup.");
-  });
+router.post("/signup",signup);
+
 router.post("/login",(req,res)=>{
   res.status(200).send({success: true, message: "login."})
   console.log("Login.");
