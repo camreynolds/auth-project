@@ -95,7 +95,7 @@ export const verifyEmail = async (req,res) => {
     
     await user.save();
 
-    
+    generateTokenAndSetCookie()
 
   }catch(error){
     console.log("Error in verifyEmail:",error);
