@@ -1,6 +1,6 @@
 import {User} from "../models/user.model.js";
 import bcryptjs from "bcryptjs";
-import {generateVerificationToken} from "../utils/generateVerificationToken.js";
+import {generateVerificationToken, generateTokenAndSetCookie} from "../utils/generateVerificationToken.js";
 import {sendVerificationEmail} from "../mailtrap/emails.js";
 
 // Hash de bcrypt válido utilizado para igualar el tiempo de respuesta durante el inicio de sesión: 
@@ -71,5 +71,34 @@ export const signup = async (req,res) => {
     res.status(500).json({ 
       success: false, 
       message: "Unable to create account. Please try again."});
+  };
+};
+
+export const verifyEmail = async (req,res) => {
+  const {email,code} = req.body;
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try{
+    const user = await User.findOne({
+      email: normalizedEmail,
+      verificationToken: code,
+      verificationTokenExpiredAt: {$gt: Date.now()}
+    });
+
+    if(!user){
+      return res.status(400).json({success:false, message:"Invalid or expired verification code."});
+    };
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiredAt = undefined;
+    
+    await user.save();
+
+    
+
+  }catch(error){
+    console.log("Error in verifyEmail:",error);
+    res.status(500).json({status:false, message:"server error."})    
   };
 };
