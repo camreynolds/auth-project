@@ -1,5 +1,5 @@
 import express from "express";
-import { signup } from "../controllers/auth.controllers.js";
+import { signup, verifyEmail } from "../controllers/auth.controllers.js";
 
 const router = express.Router();
 
@@ -13,5 +13,7 @@ router.post("/logout",(req,res)=>{
   res.status(200).send({success: true, message: "logout."})
   console.log("Logout");
 });
+
+router.post("/verify-email",verifyEmail);
 
 export default router;

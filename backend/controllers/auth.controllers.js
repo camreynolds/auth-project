@@ -1,7 +1,8 @@
 import {User} from "../models/user.model.js";
 import bcryptjs from "bcryptjs";
 import {generateVerificationToken} from "../utils/generateVerificationToken.js";
-import {sendVerificationEmail} from "../mailtrap/emails.js";
+import {generateTokenAndSetCookie} from "../utils/generateTokenAndSetCookie.js"
+import {sendVerificationEmail,sendWelcomeEmail} from "../mailtrap/emails.js";
 
 // Hash de bcrypt válido utilizado para igualar el tiempo de respuesta durante el inicio de sesión: 
 // cuando no se encuentra ningún usuario, aun así ejecutamos bcrypt.compare con este hash ficticio; 
@@ -71,5 +72,46 @@ export const signup = async (req,res) => {
     res.status(500).json({ 
       success: false, 
       message: "Unable to create account. Please try again."});
+  };
+};
+
+export const verifyEmail = async (req,res) => {
+  const {email,code} = req.body;
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try{
+    const user = await User.findOne({
+      email: normalizedEmail,
+      verificationToken: code,
+      verificationTokenExpiredAt: {$gt: Date.now()}
+    });
+
+    if(!user){
+      return res.status(400).json({success:false, message:"Invalid or expired verification code."});
+    };
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiredAt = undefined;
+    
+    await user.save();
+
+    generateTokenAndSetCookie(res,user._id,user.tokenVersion);
+
+    try {
+      await sendWelcomeEmail(user.email,user.name);
+    } catch (error) {
+      console.error("Error sending welcome email:",error);      
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully.",
+      user, // sanitizado mediante la transformación toJSON del esquema (sin contraseñas ni tokens).
+    });
+
+  }catch(error){
+    console.log("Error in verifyEmail:",error);
+    res.status(500).json({status:false, message:"server error."})    
   };
 };
