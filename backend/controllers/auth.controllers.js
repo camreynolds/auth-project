@@ -1,7 +1,8 @@
 import {User} from "../models/user.model.js";
 import bcryptjs from "bcryptjs";
-import {generateVerificationToken, generateTokenAndSetCookie} from "../utils/generateVerificationToken.js";
-import {sendVerificationEmail} from "../mailtrap/emails.js";
+import {generateVerificationToken} from "../utils/generateVerificationToken.js";
+import {generateTokenAndSetCookie} from "../utils/generateTokenAndSetCookie.js"
+import {sendVerificationEmail,sendWelcomeEmail} from "../mailtrap/emails.js";
 
 // Hash de bcrypt válido utilizado para igualar el tiempo de respuesta durante el inicio de sesión: 
 // cuando no se encuentra ningún usuario, aun así ejecutamos bcrypt.compare con este hash ficticio; 
@@ -95,7 +96,19 @@ export const verifyEmail = async (req,res) => {
     
     await user.save();
 
-    generateTokenAndSetCookie()
+    generateTokenAndSetCookie(res,user._id,user.tokenVersion);
+
+    try {
+      await sendWelcomeEmail(user.email,user.name);
+    } catch (error) {
+      console.error("Error sending welcome email:",error);      
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Email verified successfully.",
+      user, // sanitizado mediante la transformación toJSON del esquema (sin contraseñas ni tokens).
+    });
 
   }catch(error){
     console.log("Error in verifyEmail:",error);
