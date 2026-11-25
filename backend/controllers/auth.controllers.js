@@ -115,3 +115,44 @@ export const verifyEmail = async (req,res) => {
     res.status(500).json({status:false, message:"server error."})    
   };
 };
+
+/**
+ * Sends a new verification code to an unverified account without revealing
+ * whether an account exists for the requested email.
+ *
+ * @param {import("express").Request} req - Request containing the account email.
+ * @param {import("express").Response} res - Response used to return a generic status.
+ * @returns {Promise<void>}
+ */
+export const resendVerificationEmail = async (req,res) => {
+  const {email} = req.body;
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    const user = await User.findOne({email:normalizedEmail, isVerified:false});
+    if(user){
+      const verificationToken = generateVerificationToken();
+      user.verificationToken = verificationToken;
+      
+      await user.save();
+
+      try{
+        await sendVerificationEmail(user.email,verificationToken);
+      }catch(error){
+        console.error("Error resending verification email:",error);
+      };
+
+    };
+
+    return res.status(200).json({
+      success: true,
+      message: "If an unverified account exists for that email, a verification code has been sent",
+    });
+
+  } catch (error) {
+    console.error("Error in resending verification email:",error);
+    return res.status(500).json({
+      success: false, 
+      message:"Unable to send a verification code. Please try again."});    
+  }
+};
