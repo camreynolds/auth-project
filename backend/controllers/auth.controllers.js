@@ -156,3 +156,47 @@ export const resendVerificationEmail = async (req,res) => {
       message:"Unable to send a verification code. Please try again."});    
   }
 };
+
+/**
+ * Autentica a un usuario con correo electrónico y contraseña, luego emite una cookie de autenticación 
+ * después de confirmar que la cuenta está verificada.
+ * 
+ * @param {import("express").Request} req - Solicitud que contiene correo electrónico y contraseña.
+ * @param {import("express").Response} res - Respuesta utilizada para establecer la cookie de autenticación y devolver el estado.
+ * @returns {Promise<void>}
+ */
+export const login = async (req,res) => {
+  const {email,password} = req.body;
+  const normalizedEmail = email.trim().toLowerCase();
+  
+  try {
+    const user = await User.findOne({email: normalizedEmail});
+    
+    // Ecualización de tiempos: ejecutar siempre bcrypt.compare — contra un hash ficticio 
+    // cuando el usuario no está presente — para que el tiempo de respuesta no revele si 
+    // existe una cuenta (anteriormente, un usuario no presente devolvía una respuesta temprana).
+
+     const isPasswordValid = await bcryptjs.compare(password, user ? user.password : DUMMY_PASSWORD_HASH);     
+
+     if(!user || !isPasswordValid){
+      return res.status(400).json({success: false, message:"Invalid credentials."});
+     };
+
+    if(!user.isVerified){
+      return res.status(400).json({success: false, message:"Please, verify your email before logging in."});
+    };
+
+    user.lastLogin = new Date();
+    await user.save();
+    generateTokenAndSetCookie(res,user._id,user.tokenVersion);
+
+    res.status(200).json({
+      sucess: true,
+      message: "Logged successfully.",
+      user, // sanitizado mediante la transformación toJSON del esquema (sin contraseñas ni tokens).
+    });
+  } catch (error) {
+    console.error("Error in loging:",error);
+    res.status(400).json({success: false, message: error.message});
+  }
+};
