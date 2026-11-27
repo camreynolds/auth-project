@@ -200,3 +200,27 @@ export const login = async (req,res) => {
     res.status(400).json({success: false, message: error.message});
   }
 };
+
+/** 
+ * Cierra la sesión del usuario autenticado incrementando la versión de su token y 
+ * borrando la cookie de autenticación. 
+ * 
+ * @param {import("express").Request} req - Solicitud que contiene el ID de usuario autenticado.
+ * @param {import("express").Response} res - Respuesta utilizada para borrar la cookie y devolver el estado.
+ * @returns {Promise<void>}
+*/
+
+export const logout = async (req,res) => {
+  try {
+    await User.findByIdAndUpdate(req.userId,{$inc:{tokenVersion:1}});
+    res.clearCookie("token",{
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+    return res.status(200).json({success: true, message: "Logged out successfully."});
+  } catch (error) {
+    console.error("Error in logout:",error);
+    return res.status(500).json({success: false, message:"Unable to log out. Please try again."});
+  }
+};
